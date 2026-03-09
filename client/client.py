@@ -1,75 +1,76 @@
-# import socket for network communication
 import socket
-
-# import threading to receive messages while typing
 import threading
-
-# import sys to exit program
 import sys
 
-# server address
 HOST = "127.0.0.1"
-
-# server port
 PORT = 5000
 
+
 def receive_messages(sock):
-    
-    # Continuously receive messages from server
+
     while True:
+
         try:
-            message = sock.recv(1024).decode()
+            message = sock.recv(1024)
+
             if not message:
                 break
-            print(message)
+
+            print(message.decode())
+
         except:
             break
 
 def send_messages(sock):
-
-    # Send messages typed by user
     while True:
-        message = input()
+        try:
+            message = input().strip()
 
-        # exit chat
-        if message == "/quit":
-            sock.send("/quit".encode())
-            sock.close()
-            sys.exit()
+            if not message:
+                continue
 
-        # send message to server
-        sock.send(message.encode())
+            if message == "/quit":
+
+                sock.send("QUIT".encode())
+                sock.close()
+                sys.exit()
+
+            elif message == "/users":
+
+                sock.send("USERS".encode())
+
+            else:
+
+                sock.send(f"MSG {message}".encode())
+
+        except:
+            break
+
 
 def start_client():
 
-    # create TCP socket
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    # connect to server
     client.connect((HOST, PORT))
 
-    # receive username prompt
-    username_prompt = client.recv(1024).decode()
+    prompt = client.recv(1024).decode()
 
-    # ask user
-    username = input(username_prompt)
+    if prompt == "USERNAME":
 
-    # send username
-    client.send(username.encode())
+        username = input("Enter username: ")
 
-    # thread to receive messages
-    receive_thread = threading.Thread(
-        target=receive_messages,
-        args=(client,)
-    )
+        client.send(username.encode())
+
+    receive_thread = threading.Thread(target=receive_messages, args=(client,))
+    receive_thread.daemon = True
     receive_thread.start()
 
-    # thread to send messages
-    send_thread = threading.Thread(
-        target=send_messages,
-        args=(client,)
-    )
+    send_thread = threading.Thread(target=send_messages, args=(client,))
+    send_thread.daemon = True
     send_thread.start()
+
+    receive_thread.join()
+    send_thread.join()
 
 if __name__ == "__main__":
     start_client()
