@@ -31,15 +31,22 @@ def load_history():
     with open(HISTORY_FILE, "r", encoding="utf-8") as f:
         return f.readlines()
 
-def broadcast(message):
+def broadcast(message, sender=None):
     disconnected = []
     with lock:
         sockets = list(clients.keys())
+
     for client in sockets:
+
+        # do not send message back to sender
+        if client == sender:
+            continue
+
         try:
             client.send((message + "\n").encode("utf-8"))
         except:
             disconnected.append(client)
+
     for client in disconnected:
         remove_client(client)
 
@@ -97,7 +104,7 @@ def handle_client(client_socket, addr):
                 print(formatted)
                 save_history(formatted)
                 log_event(formatted)
-                broadcast(formatted)
+                broadcast(formatted, client_socket)
 
             elif data == "USERS":
                 with lock:
